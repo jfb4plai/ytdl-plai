@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YT-DL PLAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:    #0a9370;
+      --teal-dk: #077055;
+      --orange:  #f97316;
+      --bg:      #f0faf7;
+      --card:    #ffffff;
+      --border:  #d1e8e0;
+      --text:    #1a2e27;
+      --muted:   #5a7a70;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    header img { width: 48px; height: 48px; border-radius: 10px; }
+    header h1 { font-size: 1.6rem; font-weight: 700; color: var(--teal); }
+    header p  { font-size: 0.85rem; color: var(--muted); }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 0;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 2px 12px rgba(10,147,112,.07);
+      overflow: hidden;
+    }
+
+    /* ── Onglets ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      flex: 1;
+      padding: .9rem 1rem;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      transition: color .2s, background .2s;
+    }
+    .tab:hover { background: #f0faf7; }
+    .tab.active {
+      color: var(--teal);
+      border-bottom: 2.5px solid var(--teal);
+      background: #f8fffe;
+    }
+
+    /* ── Corps de la carte ── */
+    .card-body { padding: 1.8rem; }
+
+    /* ── Input ── */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+      margin-bottom: 1.2rem;
+    }
+    label {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    input[type="url"] {
+      width: 100%;
+      padding: .75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: .95rem;
+      color: var(--text);
+      background: #f8fffe;
+      transition: border-color .2s;
+      outline: none;
+    }
+    input[type="url"]:focus { border-color: var(--teal); }
+    input[type="url"]::placeholder { color: #9dbdb5; }
+
+    /* ── Bouton principal ── */
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: .8rem;
+      background: var(--orange);
+      color: #fff;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background .2s, opacity .2s;
+    }
+    .btn-primary:hover:not(:disabled) { background: #ea6d10; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Bouton secondaire ── */
+    .btn-secondary {
+      display: block;
+      width: 100%;
+      margin-top: .6rem;
+      padding: .6rem;
+      background: none;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 500;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: color .2s, border-color .2s;
+    }
+    .btn-secondary:hover { color: #c0392b; border-color: #c0392b; }
+
+    /* ── Progression vidéo ── */
+    #progress-section { display: none; margin-top: 1.6rem; }
+
+    .video-title {
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: .8rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bar-track {
+      background: #d1e8e0;
+      border-radius: 99px;
+      height: 10px;
+      overflow: hidden;
+      margin-bottom: .5rem;
+    }
+    .bar-fill {
+      background: var(--teal);
+      height: 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width .3s ease;
+    }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    /* ── Résultat transcript ── */
+    #transcript-section { display: none; margin-top: 1.4rem; }
+
+    .transcript-meta {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+    .transcript-meta strong { color: var(--text); }
+
+    .transcript-box {
+      background: #f8fffe;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      max-height: 280px;
+      overflow-y: auto;
+      font-size: .88rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .transcript-actions {
+      display: flex;
+      gap: .6rem;
+      margin-top: .8rem;
+    }
+    .btn-action {
+      flex: 1;
+      padding: .55rem .8rem;
+      font-family: inherit;
+      font-size: .85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+    .btn-copy {
+      background: #e6f7f1;
+      color: var(--teal-dk);
+      border: 1px solid #b2dfcc;
+    }
+    .btn-copy:hover { background: #d0f0e5; }
+    .btn-dl-txt {
+      background: #fff7ed;
+      color: #c2550a;
+      border: 1px solid #fed7aa;
+    }
+    .btn-dl-txt:hover { background: #ffedd5; }
+
+    /* ── Message état ── */
+    .status-msg {
+      display: none;
+      margin-top: 1.2rem;
+      padding: .8rem 1rem;
+      border-radius: 10px;
+      font-size: .9rem;
+      font-weight: 500;
+    }
+    .status-msg.success { background: #e6f7f1; color: var(--teal-dk); border: 1px solid #b2dfcc; }
+    .status-msg.error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .status-msg.info    { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+    /* ── Pied de page ── */
+    footer {
+      margin-top: 2rem;
+      font-size: .75rem;
+      color: var(--muted);
+      text-align: center;
+      max-width: 480px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="/static/plai-logo.jpg" alt="PLAI" onerror="this.style.display='none'" />
+    <div>
+      <h1>YT-DL PLAI</h1>
+      <p>Téléchargeur YouTube local</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <!-- Onglets -->
+    <div class="tabs">
+      <button class="tab active" id="tab-video" onclick="setMode('video')">Vidéo MP4</button>
+      <button class="tab" id="tab-transcript" onclick="setMode('transcript')">Transcript</button>
+    </div>
+
+    <div class="card-body">
+      <!-- URL (partagée) -->
+      <div class="input-group">
+        <label for="url-input">URL YouTube</label>
+        <input
+          type="url"
+          id="url-input"
+          placeholder="https://www.youtube.com/watch?v=..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <!-- Boutons mode Vidéo -->
+      <div id="video-controls">
+        <button class="btn-primary" id="btn-download" onclick="startDownload()">
+          Télécharger MP4 1080p
+        </button>
+        <button class="btn-secondary" id="btn-cancel" style="display:none" onclick="cancelDownload()">
+          Annuler
+        </button>
+      </div>
+
+      <!-- Bouton mode Transcript -->
+      <div id="transcript-controls" style="display:none">
+        <button class="btn-primary" id="btn-transcript" onclick="startTranscript()">
+          Extraire le transcript
+        </button>
+      </div>
+
+      <!-- Progression vidéo -->
+      <div id="progress-section">
+        <div class="video-title" id="video-title"></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+        <div class="progress-meta">
+          <span id="pct-label">0%</span>
+          <span id="meta-right"></span>
+        </div>
+      </div>
+
+      <!-- Résultat transcript -->
+      <div id="transcript-section">
+        <div class="transcript-meta">
+          <strong id="tr-title"></strong>
+          <span id="tr-lang"></span>
+        </div>
+        <div class="transcript-box" id="transcript-box"></div>
+        <div class="transcript-actions">
+          <button class="btn-action btn-copy" onclick="copyTranscript()">Copier</button>
+          <button class="btn-action btn-dl-txt" onclick="downloadTranscript()">Télécharger .txt</button>
+        </div>
+      </div>
+
+      <!-- Message d'état (erreurs, succès) -->
+      <div class="status-msg" id="status-msg"></div>
+    </div>
+  </div>
+
+  <footer>
+    Usage pédagogique privé uniquement &mdash; contenu réservé à la classe, non redistribué.<br/>
+    <button onclick="quitApp()" style="margin-top:.8rem;background:none;border:none;color:#9dbdb5;font-size:.72rem;cursor:pointer;text-decoration:underline;font-family:inherit;">
+      Arrêter l'application
+    </button>
+  </footer>
+
+  <script>
+    let evtSource = null;
+    let currentMode = 'video';
+    let transcriptData = { title: '', text: '' };
+
+    // ── Mode (onglets) ─────────────────────────────────────────
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('tab-video').classList.toggle('active', mode === 'video');
+      document.getElementById('tab-transcript').classList.toggle('active', mode === 'transcript');
+      document.getElementById('video-controls').style.display      = mode === 'video'      ? 'block' : 'none';
+      document.getElementById('transcript-controls').style.display = mode === 'transcript' ? 'block' : 'none';
+      document.getElementById('progress-section').style.display    = 'none';
+      document.getElementById('transcript-section').style.display  = 'none';
+      hideStatus();
+    }
+
+    // ── Utilitaires UI ─────────────────────────────────────────
+    function showStatus(type, msg) {
+      const el = document.getElementById('status-msg');
+      el.className = 'status-msg ' + type;
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function hideStatus() { document.getElementById('status-msg').style.display = 'none'; }
+
+    // ── Mode Vidéo ─────────────────────────────────────────────
+    function setVideoUI(busy) {
+      document.getElementById('btn-download').disabled = busy;
+      document.getElementById('btn-cancel').style.display = busy ? 'block' : 'none';
+    }
+
+    function updateBar(pct) {
+      document.getElementById('bar-fill').style.width = pct + '%';
+      document.getElementById('pct-label').textContent = pct + '%';
+    }
+
+    function handleState(s) {
+      switch (s.status) {
+        case 'starting':
+          hideStatus();
+          document.getElementById('progress-section').style.display = 'block';
+          updateBar(0);
+          document.getElementById('video-title').textContent = 'Analyse en cours…';
+          document.getElementById('meta-right').textContent = '';
+          break;
+        case 'downloading':
+          if (s.title) document.getElementById('video-title').textContent = s.title;
+          updateBar(s.percent);
+          document.getElementById('meta-right').textContent =
+            [s.speed, s.eta ? s.eta + ' restant' : ''].filter(Boolean).join(' · ');
+          break;
+        case 'processing':
+          updateBar(100);
+          document.getElementById('meta-right').textContent = 'Assemblage MP4…';
+          break;
+        case 'done':
+          setVideoUI(false);
+          document.getElementById('progress-section').style.display = 'none';
+          showStatus('success', '\u2713 Enregistré dans Téléchargements : ' + s.title);
+          document.getElementById('url-input').value = '';
+          if (evtSource) { evtSource.close(); evtSource = null; }
+          break;
+        case 'error':
+          setVideoUI(false);
+          document.getElementById('progress-section').style.display = 'none';
+          showStatus('error', 'Erreur : ' + (s.error || 'inconnue'));
+          if (evtSource) { evtSource.close(); evtSource = null; }
+          break;
+        case 'cancelled':
+          setVideoUI(false);
+          document.getElementById('progress-section').style.display = 'none';
+          showStatus('info', 'Téléchargement annulé.');
+          if (evtSource) { evtSource.close(); evtSource = null; }
+          break;
+      }
+    }
+
+    function startDownload() {
+      const url = getURL(); if (!url) return;
+      hideStatus();
+      setVideoUI(true);
+      fetch('/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { setVideoUI(false); showStatus('error', data.error); return; }
+        if (evtSource) evtSource.close();
+        evtSource = new EventSource('/progress');
+        evtSource.onmessage = e => handleState(JSON.parse(e.data));
+        evtSource.onerror   = () => { evtSource.close(); evtSource = null; };
+      })
+      .catch(() => { setVideoUI(false); showStatus('error', 'Impossible de contacter le serveur local.'); });
+    }
+
+    function cancelDownload() { fetch('/cancel', { method: 'POST' }); }
+
+    // ── Mode Transcript ────────────────────────────────────────
+    function startTranscript() {
+      const url = getURL(); if (!url) return;
+      hideStatus();
+      document.getElementById('transcript-section').style.display = 'none';
+      const btn = document.getElementById('btn-transcript');
+      btn.disabled = true;
+      btn.textContent = 'Extraction en cours…';
+
+      fetch('/transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      })
+      .then(r => r.json())
+      .then(data => {
+        btn.disabled = false;
+        btn.textContent = 'Extraire le transcript';
+        if (data.error) { showStatus('error', data.error); return; }
+        transcriptData = { title: data.title, text: data.transcript };
+        document.getElementById('tr-title').textContent = data.title;
+        document.getElementById('tr-lang').textContent =
+          data.lang === 'fr' ? ' — Français' : data.lang === 'en' ? ' — Anglais' : '';
+        document.getElementById('transcript-box').textContent = data.transcript;
+        document.getElementById('transcript-section').style.display = 'block';
+      })
+      .catch(() => {
+        btn.disabled = false;
+        btn.textContent = 'Extraire le transcript';
+        showStatus('error', 'Impossible de contacter le serveur local.');
+      });
+    }
+
+    function copyTranscript() {
+      navigator.clipboard.writeText(transcriptData.text).then(() => {
+        const btn = document.querySelector('.btn-copy');
+        btn.textContent = 'Copié !';
+        setTimeout(() => btn.textContent = 'Copier', 2000);
+      });
+    }
+
+    function downloadTranscript() {
+      const blob = new Blob([transcriptData.title + '\n\n' + transcriptData.text], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (transcriptData.title || 'transcript').replace(/[\\/:*?"<>|]/g, '_') + '.txt';
+      a.click();
+    }
+
+    // ── Partagé ────────────────────────────────────────────────
+    function getURL() {
+      const url = document.getElementById('url-input').value.trim();
+      if (!url) { showStatus('error', 'Colle une URL YouTube.'); return null; }
+      if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+        showStatus('error', 'URL non reconnue — seules les URLs YouTube sont supportées.');
+        return null;
+      }
+      return url;
+    }
+
+    document.getElementById('url-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') currentMode === 'video' ? startDownload() : startTranscript();
+    });
+
+    function quitApp() {
+      if (!confirm('Arrêter YT-DL PLAI ?')) return;
+      fetch('/quit', { method: 'POST' }).finally(() => window.close());
+    }
+
+    document.getElementById('url-input').addEventListener('focus', () => {
+      if (document.getElementById('url-input').value) return;
+      navigator.clipboard.readText().then(text => {
+        if (text && (text.includes('youtube.com') || text.includes('youtu.be')))
+          document.getElementById('url-input').value = text;
+      }).catch(() => {});
+    });
+  </script>
+</body>
+</html>

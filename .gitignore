@@ -1,0 +1,21 @@
+# PyInstaller
+dist/
+build/
+*.spec
+
+# Inno Setup output
+Output/
+
+# ffmpeg (binaire lourd, non versionné)
+ffmpeg.exe
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
