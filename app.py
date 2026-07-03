@@ -11,6 +11,8 @@ import webbrowser
 import json
 import time
 import socket
+import urllib.request
+import urllib.error
 
 from flask import Flask, render_template, request, Response, jsonify
 import yt_dlp
@@ -111,13 +113,8 @@ def friendly_error(exc):
 
 
 def get_cookie_opts():
-    """Retourne les options cookies si Chrome est disponible."""
-    try:
-        import browser_cookie3  # optionnel — pas dans requirements.txt de base
-        return {"cookiesfrombrowser": ("chrome",)}
-    except Exception:
-        pass
-    return {}
+    """Utilise les cookies Edge via yt-dlp natif."""
+    return {"cookiesfrombrowser": ("edge",)}
 
 
 # ── Hook de progression yt-dlp ────────────────────────────────────────────────
@@ -276,6 +273,127 @@ def get_transcript():
 def cancel():
     _cancel_event.set()
     return jsonify({"ok": True})
+
+
+# ── Configuration (clé API) ───────────────────────────────────────────────────
+
+CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".ytdl-plai-config.json")
+
+def load_config():
+    try:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_config(data):
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+@app.route("/config", methods=["GET"])
+def get_config():
+    cfg = load_config()
+    return jsonify({"has_key": bool(cfg.get("anthropic_key"))})
+
+@app.route("/config", methods=["POST"])
+def set_config():
+    data = request.get_json(silent=True) or {}
+    key = (data.get("anthropic_key") or "").strip()
+    if not key:
+        return jsonify({"error": "Clé manquante"}), 400
+    cfg = load_config()
+    cfg["anthropic_key"] = key
+    save_config(cfg)
+    return jsonify({"ok": True})
+
+
+# ── Génération IA ─────────────────────────────────────────────────────────────
+
+PROMPTS = {
+    "questionnement": (
+        "Tu es un assistant pédagogique. À partir du transcript ci-dessous, "
+        "génère 7 questions de questionnement socratique couvrant les 6 niveaux "
+        "de la taxonomie de Bloom révisée (mémorisation, compréhension, application, "
+        "analyse, évaluation, création). "
+        "Une question par niveau minimum. Format : niveau en gras, puis la question. "
+        "Langue : celle du transcript. Pas d'introduction ni de conclusion."
+    ),
+    "quiz": (
+        "Tu es un assistant pédagogique. À partir du transcript ci-dessous, "
+        "génère 6 questions à choix multiple (QCM). "
+        "Format pour chaque question : "
+        "numéro et intitulé, puis A) B) C) D) sur des lignes séparées, "
+        "puis 'Réponse : X' sur une nouvelle ligne. "
+        "Langue : celle du transcript. Pas d'introduction ni de conclusion."
+    ),
+    "fiche": (
+        "Tu es un assistant pédagogique. À partir du transcript ci-dessous, "
+        "génère une fiche didactique structurée avec : "
+        "1. Titre de la vidéo ; "
+        "2. Résumé en 5 points essentiels (puces) ; "
+        "3. Concepts clés (3 à 5 termes, chacun avec une définition courte) ; "
+        "4. Question de réflexion pour la classe ; "
+        "5. Prolongement suggéré (activité ou ressource). "
+        "Langue : celle du transcript. Pas d'introduction ni de conclusion."
+    ),
+}
+
+@app.route("/generate", methods=["POST"])
+def generate():
+    data = request.get_json(silent=True) or {}
+    transcript = (data.get("transcript") or "").strip()
+    mode = data.get("mode", "questionnement")
+
+    if not transcript:
+        return jsonify({"error": "Transcript manquant"}), 400
+    if mode not in PROMPTS:
+        return jsonify({"error": "Mode inconnu"}), 400
+
+    cfg = load_config()
+    api_key = cfg.get("anthropic_key", "")
+    if not api_key:
+        return jsonify({"error": "Clé API Anthropic non configurée. Cliquer sur ⚙️ pour l'ajouter."}), 401
+
+    # Tronquer à 12 000 caractères pour éviter de dépasser les tokens Haiku
+    transcript_trimmed = transcript[:12000]
+
+    payload = json.dumps({
+        "model": "claude-haiku-4-5-20251001",
+        "max_tokens": 1200,
+        "messages": [
+            {
+                "role": "user",
+                "content": f"{PROMPTS[mode]}\n\n---\nTRANSCRIPT :\n{transcript_trimmed}\n---"
+            }
+        ]
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            text = result["content"][0]["text"]
+            return jsonify({"ok": True, "result": text})
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        try:
+            msg = json.loads(body).get("error", {}).get("message", body)
+        except Exception:
+            msg = body[:300]
+        if e.code == 401:
+            msg = "Clé API invalide. Vérifier dans ⚙️."
+        return jsonify({"error": msg}), 500
+    except Exception as exc:
+        return jsonify({"error": str(exc)[:200]}), 500
 
 
 # ── Démarrage ─────────────────────────────────────────────────────────────────

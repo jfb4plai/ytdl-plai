@@ -253,9 +253,119 @@
       max-width: 480px;
       line-height: 1.6;
     }
+
+    /* ── Bouton engrenage header ── */
+    .btn-gear {
+      margin-left: auto;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: .4rem .65rem;
+      font-size: 1rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: color .2s, border-color .2s;
+    }
+    .btn-gear:hover { color: var(--teal); border-color: var(--teal); }
+    .btn-gear.has-key { color: var(--teal); border-color: var(--teal); }
+
+    /* ── Modal clé API ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    }
+    .modal-box h2 { font-size: 1.1rem; margin-bottom: .4rem; color: var(--text); }
+    .modal-box p  { font-size: .84rem; color: var(--muted); margin-bottom: 1.2rem; line-height: 1.5; }
+    .modal-box input[type="password"] {
+      width: 100%;
+      padding: .7rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: .95rem;
+      margin-bottom: .8rem;
+      outline: none;
+    }
+    .modal-box input[type="password"]:focus { border-color: var(--teal); }
+    .modal-footer { display: flex; gap: .6rem; justify-content: flex-end; margin-top: .4rem; }
+    .btn-modal-cancel {
+      padding: .55rem 1.1rem; border-radius: 8px; border: 1.5px solid var(--border);
+      background: none; font-family: inherit; font-size: .88rem; color: var(--muted); cursor: pointer;
+    }
+    .btn-modal-save {
+      padding: .55rem 1.2rem; border-radius: 8px; border: none;
+      background: var(--teal); color: #fff; font-family: inherit; font-size: .88rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .btn-modal-save:hover { background: var(--teal-dk); }
+
+    /* ── Section génération IA ── */
+    #generate-section { display: none; margin-top: 1.4rem; border-top: 1px solid var(--border); padding-top: 1.2rem; }
+    .generate-label { font-size: .78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .7rem; }
+    .generate-btns { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .btn-gen {
+      flex: 1;
+      min-width: 120px;
+      padding: .55rem .7rem;
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: #f8fffe;
+      color: var(--text);
+      cursor: pointer;
+      transition: background .2s, border-color .2s, color .2s;
+    }
+    .btn-gen:hover:not(:disabled) { background: #e6f7f1; border-color: var(--teal); color: var(--teal-dk); }
+    .btn-gen:disabled { opacity: .5; cursor: not-allowed; }
+
+    #generate-result { display: none; margin-top: .4rem; }
+    .result-box {
+      background: #f8fffe;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      max-height: 320px;
+      overflow-y: auto;
+      font-size: .88rem;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .result-actions { display: flex; gap: .6rem; margin-top: .8rem; }
   </style>
 </head>
 <body>
+
+  <!-- Modal clé API -->
+  <div class="modal-overlay" id="modal-config" onclick="closeSettings(event)">
+    <div class="modal-box">
+      <h2>⚙️ Clé API Anthropic</h2>
+      <p>Nécessaire pour générer questionnements, quiz et fiches didactiques à partir des transcripts.<br/>
+      La clé est stockée localement sur votre ordinateur, jamais transmise ailleurs.</p>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" />
+      <div class="modal-footer">
+        <button class="btn-modal-cancel" onclick="closeSettings()">Annuler</button>
+        <button class="btn-modal-save" onclick="saveKey()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
 
   <header>
     <img src="/static/plai-logo.jpg" alt="PLAI" onerror="this.style.display='none'" />
@@ -263,6 +373,7 @@
       <h1>YT-DL PLAI</h1>
       <p>Téléchargeur YouTube local</p>
     </div>
+    <button class="btn-gear" id="btn-gear" onclick="openSettings()" title="Configurer la clé API Anthropic">⚙️</button>
   </header>
 
   <div class="card">
@@ -323,6 +434,23 @@
           <button class="btn-action btn-copy" onclick="copyTranscript()">Copier</button>
           <button class="btn-action btn-dl-txt" onclick="downloadTranscript()">Télécharger .txt</button>
         </div>
+
+        <!-- Génération IA -->
+        <div id="generate-section">
+          <div class="generate-label">Générer avec l'IA</div>
+          <div class="generate-btns">
+            <button class="btn-gen" onclick="generateIA('questionnement')">Questions socratiques</button>
+            <button class="btn-gen" onclick="generateIA('quiz')">Quiz QCM</button>
+            <button class="btn-gen" onclick="generateIA('fiche')">Fiche didactique</button>
+          </div>
+          <div id="generate-result">
+            <div class="result-box" id="result-box"></div>
+            <div class="result-actions">
+              <button class="btn-action btn-copy" onclick="copyResult()">Copier</button>
+              <button class="btn-action btn-dl-txt" onclick="downloadResult()">Télécharger .txt</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Message d'état (erreurs, succès) -->
@@ -351,6 +479,7 @@
       document.getElementById('transcript-controls').style.display = mode === 'transcript' ? 'block' : 'none';
       document.getElementById('progress-section').style.display    = 'none';
       document.getElementById('transcript-section').style.display  = 'none';
+      document.getElementById('generate-section').style.display    = 'none';
       hideStatus();
     }
 
@@ -462,6 +591,7 @@
           data.lang === 'fr' ? ' — Français' : data.lang === 'en' ? ' — Anglais' : '';
         document.getElementById('transcript-box').textContent = data.transcript;
         document.getElementById('transcript-section').style.display = 'block';
+        showGenerateSection();
       })
       .catch(() => {
         btn.disabled = false;
@@ -513,6 +643,113 @@
           document.getElementById('url-input').value = text;
       }).catch(() => {});
     });
+
+    // ── Paramètres / clé API ────────────────────────────────────
+    let hasKey = false;
+    let lastResultText = '';
+
+    function checkConfig() {
+      fetch('/config').then(r => r.json()).then(d => {
+        hasKey = d.has_key;
+        document.getElementById('btn-gear').classList.toggle('has-key', hasKey);
+      }).catch(() => {});
+    }
+
+    function openSettings() {
+      document.getElementById('api-key-input').value = '';
+      document.getElementById('modal-config').classList.add('open');
+      setTimeout(() => document.getElementById('api-key-input').focus(), 100);
+    }
+
+    function closeSettings(e) {
+      if (e && e.target !== document.getElementById('modal-config')) return;
+      document.getElementById('modal-config').classList.remove('open');
+    }
+
+    function saveKey() {
+      const key = document.getElementById('api-key-input').value.trim();
+      if (!key) return;
+      fetch('/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anthropic_key: key })
+      }).then(r => r.json()).then(d => {
+        if (d.ok) {
+          hasKey = true;
+          document.getElementById('btn-gear').classList.add('has-key');
+          document.getElementById('modal-config').classList.remove('open');
+        }
+      });
+    }
+
+    document.getElementById('api-key-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveKey();
+      if (e.key === 'Escape') closeSettings();
+    });
+
+    // ── Génération IA ───────────────────────────────────────────
+    function generateIA(mode) {
+      if (!hasKey) { openSettings(); return; }
+      if (!transcriptData.text) return;
+
+      const btns = document.querySelectorAll('.btn-gen');
+      btns.forEach(b => b.disabled = true);
+      document.getElementById('generate-result').style.display = 'none';
+
+      const labels = { questionnement: 'Génération des questions…', quiz: 'Génération du quiz…', fiche: 'Génération de la fiche…' };
+      const activeBtn = [...btns].find(b => b.textContent.toLowerCase().includes(mode === 'questionnement' ? 'socra' : mode === 'quiz' ? 'qcm' : 'fiche'));
+      if (activeBtn) activeBtn.textContent = labels[mode];
+
+      fetch('/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: transcriptData.text, mode })
+      })
+      .then(r => r.json())
+      .then(data => {
+        btns.forEach(b => b.disabled = false);
+        // Restaurer les labels
+        btns[0].textContent = 'Questions socratiques';
+        btns[1].textContent = 'Quiz QCM';
+        btns[2].textContent = 'Fiche didactique';
+
+        if (data.error) { showStatus('error', data.error); return; }
+        lastResultText = data.result;
+        document.getElementById('result-box').textContent = data.result;
+        document.getElementById('generate-result').style.display = 'block';
+      })
+      .catch(() => {
+        btns.forEach(b => b.disabled = false);
+        btns[0].textContent = 'Questions socratiques';
+        btns[1].textContent = 'Quiz QCM';
+        btns[2].textContent = 'Fiche didactique';
+        showStatus('error', 'Erreur lors de la génération.');
+      });
+    }
+
+    function copyResult() {
+      navigator.clipboard.writeText(lastResultText).then(() => {
+        const btn = document.querySelector('.result-actions .btn-copy');
+        btn.textContent = 'Copié !';
+        setTimeout(() => btn.textContent = 'Copier', 2000);
+      });
+    }
+
+    function downloadResult() {
+      const blob = new Blob([transcriptData.title + '\n\n' + lastResultText], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (transcriptData.title || 'generation').replace(/[\\/:*?"<>|]/g, '_') + '-ia.txt';
+      a.click();
+    }
+
+    // Afficher la section génération quand un transcript est disponible
+    function showGenerateSection() {
+      document.getElementById('generate-section').style.display = 'block';
+      document.getElementById('generate-result').style.display = 'none';
+    }
+
+    checkConfig();
   </script>
 </body>
 </html>
